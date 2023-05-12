@@ -1,0 +1,60 @@
+version: '3'
+services:
+
+  zookeeper:
+    image: zookeeper:3.5
+
+  kafka:
+    image: wurstmeister/kafka:2.13-2.8.1
+    ports:
+      - 9092:9092
+    environment:
+      KAFKA_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    restart: always
+    depends_on:
+      - zookeeper
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+      - kafka_secrets:/etc/kafka/secrets
+  
+  zipkin:
+    image: openzipkin/zipkin:2.23
+    ports:
+      - 9411:9411
+
+  microservice-a:
+    build: ./microservice-a
+    ports:
+      - 8080:8080
+      - 8780:8780
+    environment:
+      CAMEL_COMPONENT_KAFKA_BROKERS: kafka:9092
+      OTEL_TRACES_EXPORTER: zipkin
+      OTEL_EXPORTER_ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
+      OTEL_RESOURCE_ATTRIBUTES: service.name=microservice-a
+      OTEL_METRICS_EXPORTER: none
+      MSB_URL: http://microservice-b:8080
+    depends_on:
+      - kafka
+      - zipkin
+
+  microservice-b:
+    build: ./microservice-b
+    ports:
+      - 8081:8080
+      - 8781:8780
+    environment:  
+      OTEL_TRACES_EXPORTER: zipkin
+      OTEL_EXPORTER_ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
+      OTEL_RESOURCE_ATTRIBUTES: service.name=microservice-b
+      OTEL_METRICS_EXPORTER: none
+    depends_on:
+      - kafka
+      - zipkin
+
+volumes:
+  # https://github.com/wurstmeister/kafka-docker/issues/389#issuecomment-875428899
+  kafka_data:
+  kafka_secrets:

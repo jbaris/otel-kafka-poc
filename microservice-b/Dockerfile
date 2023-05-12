@@ -5,10 +5,11 @@ COPY pom.xml .
 RUN mvn dependency:go-offline
 COPY src ./src
 RUN mvn package -DskipTests
-#RUN curl -f -L \
-# -X GET "https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v1.25.1/opentelemetry-javaagent.jar" \
-# --output /tmp/opentelemetry-javaagent.jar
-COPY opentelemetry-javaagent-1.25.1.jar /tmp/opentelemetry-javaagent.jar
+RUN curl -f -L \
+ -X GET "https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v1.25.1/opentelemetry-javaagent.jar" \
+ --output /tmp/opentelemetry-javaagent.jar
+# Fixed JAR - https://github.com/jbaris/opentelemetry-java-instrumentation/commit/77fd79785383615734d64366b1b58d4257b8d151
+# COPY opentelemetry-javaagent-1.25.1.jar /tmp/opentelemetry-javaagent.jar
 
 # Package stage
 FROM openjdk:17-alpine
